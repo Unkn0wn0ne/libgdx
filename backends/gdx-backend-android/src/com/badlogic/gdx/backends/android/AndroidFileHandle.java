@@ -18,12 +18,16 @@ package com.badlogic.gdx.backends.android;
 
 import java.io.File;
 import java.io.FileFilter;
+import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
 
 import android.content.res.AssetFileDescriptor;
 import android.content.res.AssetManager;
+import android.os.Environment;
 
 import com.badlogic.gdx.Files.FileType;
 import com.badlogic.gdx.Gdx;
@@ -229,4 +233,45 @@ public class AndroidFileHandle extends FileHandle {
 		return super.file();
 	}
 
+	@Override
+	public Writer writer (boolean append, String charset) {
+		if (type == FileType.Classpath) throw new GdxRuntimeException("Cannot write to a classpath file: " + file);
+		if (type == FileType.Internal) throw new GdxRuntimeException("Cannot write to an internal file: " + file);
+		parent().mkdirs();
+		
+		// This code here is an attempt to fix an issue with certain devices throwing ENOENT open failed errors.
+		File wFile = file();
+		
+		if (!wFile.exists()) {
+			try {
+				wFile.createNewFile();
+			} catch (IOException e) {
+			   if (type == FileType.External) {
+			   	wFile = new File(Environment.getExternalStorageDirectory(), file.getPath());
+					wFile.getParentFile().mkdirs();
+			   	if (!wFile.exists()) {
+			   		try {
+							wFile.createNewFile();
+						} catch (IOException e1) {
+							throw new GdxRuntimeException("Cannot create file: " + wFile.getAbsolutePath() + " ( " + type + ")", e);
+						}
+			   	}
+			   } else {
+			   	throw new GdxRuntimeException("Cannot create file: " + wFile.getAbsolutePath() + " ( " + type + ")", e);
+			   }
+			}
+			
+		}
+		try {
+			FileOutputStream output = new FileOutputStream(wFile, append);
+			if (charset == null)
+				return new OutputStreamWriter(output);
+			else
+				return new OutputStreamWriter(output, charset);
+		} catch (IOException ex) {
+			if (wFile.isDirectory())
+				throw new GdxRuntimeException("Cannot open a stream to a directory: " + wFile + " (" + type + ")", ex);
+			throw new GdxRuntimeException("Error writing file: " + wFile + " (" + type + ")", ex);
+		}
+	}
 }
