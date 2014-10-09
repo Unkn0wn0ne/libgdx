@@ -16,28 +16,62 @@
 
 package com.badlogic.gdx.backends.android;
 
+import java.io.File;
+
+import android.content.Context;
 import android.content.res.AssetManager;
+import android.os.Build;
 import android.os.Environment;
 
 import com.badlogic.gdx.Files;
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 
 /** @author mzechner
  * @author Nathan Sweet */
 public class AndroidFiles implements Files {
-	protected final String sdcard = Environment.getExternalStorageDirectory().getAbsolutePath() + "/";
+	protected String sdcard = "";
+	protected boolean isExternalStorageAvailable = false;
 	protected final String localpath;
 
 	protected final AssetManager assets;
-
-	public AndroidFiles (AssetManager assets) {
+  
+	public AndroidFiles (AssetManager assets, Context context) {
 		this.assets = assets;
+		if (Build.VERSION.SDK_INT > Build.VERSION_CODES.KITKAT) {
+			// Starting in Android API Level 19 'KitKat', external storage changes have been introduced.
+			File sdcardFolder = context.getExternalFilesDir(null);
+			
+			if (sdcardFolder != null) {
+				this.sdcard = sdcardFolder.getAbsolutePath();
+				if (!sdcardFolder.exists()) {
+					sdcardFolder.mkdirs();
+				}
+			}
+		} else {
+			// Legacy behavior for Android API Level 18 'Jellybean' and below. Allows unrestricted access to the sdcard
+			this.sdcard = Environment.getExternalStorageDirectory().getAbsolutePath() + "/";
+		}
 		localpath = sdcard;
 	}
 
-	public AndroidFiles (AssetManager assets, String localpath) {
+	public AndroidFiles (AssetManager assets, String localpath, Context context) {
 		this.assets = assets;
 		this.localpath = localpath.endsWith("/") ? localpath : localpath + "/";
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+			// Starting in Android API Level 19 'KitKat', external storage changes have been introduced.
+			File sdcardFolder = context.getExternalFilesDir(null);
+			
+			if (sdcardFolder != null) {
+				this.sdcard = sdcardFolder.getAbsolutePath();
+				if (!sdcardFolder.exists()) {
+					sdcardFolder.mkdirs();
+				}
+			}
+		} else {
+			// Legacy behavior for Android API Level 18 'Jellybean' and below. Allows unrestricted access to the sdcard
+			this.sdcard = Environment.getExternalStorageDirectory().getAbsolutePath() + "/";
+		}
 	}
 
 	@Override
