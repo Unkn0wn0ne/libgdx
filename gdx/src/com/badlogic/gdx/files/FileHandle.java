@@ -132,16 +132,16 @@ public class FileHandle {
 	public InputStream read () {
 		if (type == FileType.Classpath || (type == FileType.Internal && !file().exists())
 			|| (type == FileType.Local && !file().exists())) {
-			InputStream input = FileHandle.class.getResourceAsStream("/" + file.getPath().replace('\\', '/'));
-			if (input == null) throw new GdxRuntimeException("File not found: " + file + " (" + type + ")");
+			InputStream input = FileHandle.class.getResourceAsStream("/" + file().getPath().replace('\\', '/'));
+			if (input == null) throw new GdxRuntimeException("File not found: " + file() + " (" + type + ")");
 			return input;
 		}
 		try {
 			return new FileInputStream(file());
 		} catch (Exception ex) {
 			if (file().isDirectory())
-				throw new GdxRuntimeException("Cannot open a stream to a directory: " + file + " (" + type + ")", ex);
-			throw new GdxRuntimeException("Error reading file: " + file + " (" + type + ")", ex);
+				throw new GdxRuntimeException("Cannot open a stream to a directory: " + file() + " (" + type + ")", ex);
+			throw new GdxRuntimeException("Error reading file: " + file() + " (" + type + ")", ex);
 		}
 	}
 
@@ -261,15 +261,15 @@ public class FileHandle {
 	 * @throws GdxRuntimeException if this file handle represents a directory, if it is a {@link FileType#Classpath} or
 	 *            {@link FileType#Internal} file, or if it could not be written. */
 	public OutputStream write (boolean append) {
-		if (type == FileType.Classpath) throw new GdxRuntimeException("Cannot write to a classpath file: " + file);
-		if (type == FileType.Internal) throw new GdxRuntimeException("Cannot write to an internal file: " + file);
+		if (type == FileType.Classpath) throw new GdxRuntimeException("Cannot write to a classpath file: " + file());
+		if (type == FileType.Internal) throw new GdxRuntimeException("Cannot write to an internal file: " + file());
 		parent().mkdirs();
 		try {
 			return new FileOutputStream(file(), append);
 		} catch (Exception ex) {
 			if (file().isDirectory())
-				throw new GdxRuntimeException("Cannot open a stream to a directory: " + file + " (" + type + ")", ex);
-			throw new GdxRuntimeException("Error writing file: " + file + " (" + type + ")", ex);
+				throw new GdxRuntimeException("Cannot open a stream to a directory: " + file() + " (" + type + ")", ex);
+			throw new GdxRuntimeException("Error writing file: " + file() + " (" + type + ")", ex);
 		}
 	}
 
@@ -315,8 +315,8 @@ public class FileHandle {
 	 * @throws GdxRuntimeException if this file handle represents a directory, if it is a {@link FileType#Classpath} or
 	 *            {@link FileType#Internal} file, or if it could not be written. */
 	public Writer writer (boolean append, String charset) {
-		if (type == FileType.Classpath) throw new GdxRuntimeException("Cannot write to a classpath file: " + file);
-		if (type == FileType.Internal) throw new GdxRuntimeException("Cannot write to an internal file: " + file);
+		if (type == FileType.Classpath) throw new GdxRuntimeException("Cannot write to a classpath file: " + file());
+		if (type == FileType.Internal) throw new GdxRuntimeException("Cannot write to an internal file: " + file());
 		parent().mkdirs();
 		try {
 			FileOutputStream output = new FileOutputStream(file(), append);
@@ -326,8 +326,8 @@ public class FileHandle {
 				return new OutputStreamWriter(output, charset);
 		} catch (IOException ex) {
 			if (file().isDirectory())
-				throw new GdxRuntimeException("Cannot open a stream to a directory: " + file + " (" + type + ")", ex);
-			throw new GdxRuntimeException("Error writing file: " + file + " (" + type + ")", ex);
+				throw new GdxRuntimeException("Cannot open a stream to a directory: " + file() + " (" + type + ")", ex);
+			throw new GdxRuntimeException("Error writing file: " + file() + " (" + type + ")", ex);
 		}
 	}
 
@@ -350,7 +350,7 @@ public class FileHandle {
 			writer = writer(append, charset);
 			writer.write(string);
 		} catch (Exception ex) {
-			throw new GdxRuntimeException("Error writing file: " + file + " (" + type + ")", ex);
+			throw new GdxRuntimeException("Error writing file: " + file() + " (" + type + ")", ex);
 		} finally {
 			StreamUtils.closeQuietly(writer);
 		}
@@ -380,7 +380,7 @@ public class FileHandle {
 		try {
 			output.write(bytes, offset, length);
 		} catch (IOException ex) {
-			throw new GdxRuntimeException("Error writing file: " + file + " (" + type + ")", ex);
+			throw new GdxRuntimeException("Error writing file: " + file() + " (" + type + ")", ex);
 		} finally {
 			StreamUtils.closeQuietly(output);
 		}
@@ -489,7 +489,7 @@ public class FileHandle {
 	 * @throws GdxRuntimeException if this file handle is a {@link FileType#Classpath} or {@link FileType#Internal} and the child
 	 *            doesn't exist. */
 	public FileHandle child (String name) {
-		if (file.getPath().length() == 0) return new FileHandle(new File(name), type);
+		if (file().getPath().length() == 0) return new FileHandle(new File(name), type);
 		return new FileHandle(new File(file, name), type);
 	}
 
@@ -497,12 +497,12 @@ public class FileHandle {
 	 * @throws GdxRuntimeException if this file handle is a {@link FileType#Classpath} or {@link FileType#Internal} and the sibling
 	 *            doesn't exist, or this file is the root. */
 	public FileHandle sibling (String name) {
-		if (file.getPath().length() == 0) throw new GdxRuntimeException("Cannot get the sibling of the root.");
-		return new FileHandle(new File(file.getParent(), name), type);
+		if (file().getPath().length() == 0) throw new GdxRuntimeException("Cannot get the sibling of the root.");
+		return new FileHandle(new File(file().getParent(), name), type);
 	}
 
 	public FileHandle parent () {
-		File parent = file.getParentFile();
+		File parent = file().getParentFile();
 		if (parent == null) {
 			if (type == FileType.Absolute)
 				parent = new File("/");
@@ -514,8 +514,8 @@ public class FileHandle {
 
 	/** @throws GdxRuntimeException if this file handle is a {@link FileType#Classpath} or {@link FileType#Internal} file. */
 	public void mkdirs () {
-		if (type == FileType.Classpath) throw new GdxRuntimeException("Cannot mkdirs with a classpath file: " + file);
-		if (type == FileType.Internal) throw new GdxRuntimeException("Cannot mkdirs with an internal file: " + file);
+		if (type == FileType.Classpath) throw new GdxRuntimeException("Cannot mkdirs with a classpath file: " + file());
+		if (type == FileType.Internal) throw new GdxRuntimeException("Cannot mkdirs with an internal file: " + file());
 		file().mkdirs();
 	}
 
@@ -535,16 +535,16 @@ public class FileHandle {
 	/** Deletes this file or empty directory and returns success. Will not delete a directory that has children.
 	 * @throws GdxRuntimeException if this file handle is a {@link FileType#Classpath} or {@link FileType#Internal} file. */
 	public boolean delete () {
-		if (type == FileType.Classpath) throw new GdxRuntimeException("Cannot delete a classpath file: " + file);
-		if (type == FileType.Internal) throw new GdxRuntimeException("Cannot delete an internal file: " + file);
+		if (type == FileType.Classpath) throw new GdxRuntimeException("Cannot delete a classpath file: " + file());
+		if (type == FileType.Internal) throw new GdxRuntimeException("Cannot delete an internal file: " + file());
 		return file().delete();
 	}
 
 	/** Deletes this file or directory and all children, recursively.
 	 * @throws GdxRuntimeException if this file handle is a {@link FileType#Classpath} or {@link FileType#Internal} file. */
 	public boolean deleteDirectory () {
-		if (type == FileType.Classpath) throw new GdxRuntimeException("Cannot delete a classpath file: " + file);
-		if (type == FileType.Internal) throw new GdxRuntimeException("Cannot delete an internal file: " + file);
+		if (type == FileType.Classpath) throw new GdxRuntimeException("Cannot delete a classpath file: " + file());
+		if (type == FileType.Internal) throw new GdxRuntimeException("Cannot delete an internal file: " + file());
 		return deleteDirectory(file());
 	}
 
@@ -557,8 +557,8 @@ public class FileHandle {
 	/** Deletes all children of this directory, recursively. Optionally preserving the folder structure.
 	 * @throws GdxRuntimeException if this file handle is a {@link FileType#Classpath} or {@link FileType#Internal} file. */
 	public void emptyDirectory (boolean preserveTree) {
-		if (type == FileType.Classpath) throw new GdxRuntimeException("Cannot delete a classpath file: " + file);
-		if (type == FileType.Internal) throw new GdxRuntimeException("Cannot delete an internal file: " + file);
+		if (type == FileType.Classpath) throw new GdxRuntimeException("Cannot delete a classpath file: " + file());
+		if (type == FileType.Internal) throw new GdxRuntimeException("Cannot delete an internal file: " + file());
 		emptyDirectory(file(), preserveTree);
 	}
 
@@ -591,8 +591,8 @@ public class FileHandle {
 	 * @throws GdxRuntimeException if the source or destination file handle is a {@link FileType#Classpath} or
 	 *            {@link FileType#Internal} file. */
 	public void moveTo (FileHandle dest) {
-		if (type == FileType.Classpath) throw new GdxRuntimeException("Cannot move a classpath file: " + file);
-		if (type == FileType.Internal) throw new GdxRuntimeException("Cannot move an internal file: " + file);
+		if (type == FileType.Classpath) throw new GdxRuntimeException("Cannot move a classpath file: " + file());
+		if (type == FileType.Internal) throw new GdxRuntimeException("Cannot move an internal file: " + file());
 		copyTo(dest);
 		delete();
 		if (exists() && isDirectory()) deleteDirectory();
@@ -601,7 +601,7 @@ public class FileHandle {
 	/** Returns the length in bytes of this file, or 0 if this file is a directory, does not exist, or the size cannot otherwise be
 	 * determined. */
 	public long length () {
-		if (type == FileType.Classpath || (type == FileType.Internal && !file.exists())) {
+		if (type == FileType.Classpath || (type == FileType.Internal && !file().exists())) {
 			InputStream input = read();
 			try {
 				return input.available();
@@ -637,7 +637,7 @@ public class FileHandle {
 	}
 
 	public String toString () {
-		return file.getPath().replace('\\', '/');
+		return file().getPath().replace('\\', '/');
 	}
 
 	static public FileHandle tempFile (String prefix) {

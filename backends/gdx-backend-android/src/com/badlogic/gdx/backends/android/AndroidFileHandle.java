@@ -35,31 +35,34 @@ import com.badlogic.gdx.utils.GdxRuntimeException;
 public class AndroidFileHandle extends FileHandle {
 	// The asset manager, or null if this is not an internal file.
 	final AssetManager assets;
-
+	final AndroidFiles androidFiles;
+	
 	AndroidFileHandle (AssetManager assets, String fileName, FileType type) {
 		super(fileName.replace('\\', '/'), type);
 		this.assets = assets;
+		this.androidFiles = (AndroidFiles)Gdx.files;
 	}
 
 	AndroidFileHandle (AssetManager assets, File file, FileType type) {
 		super(file, type);
 		this.assets = assets;
+		this.androidFiles = (AndroidFiles)Gdx.files;
 	}
 
 	public FileHandle child (String name) {
 		name = name.replace('\\', '/');
-		if (file.getPath().length() == 0) return new AndroidFileHandle(assets, new File(name), type);
-		return new AndroidFileHandle(assets, new File(file, name), type);
+		if (file().getPath().length() == 0) return new AndroidFileHandle(assets, new File(name), type);
+		return new AndroidFileHandle(assets, new File(file(), name), type);
 	}
 
 	public FileHandle sibling (String name) {
 		name = name.replace('\\', '/');
-		if (file.getPath().length() == 0) throw new GdxRuntimeException("Cannot get the sibling of the root.");
-		return new AndroidFileHandle(assets, new File(file.getParent(), name), type);
+		if (file().getPath().length() == 0) throw new GdxRuntimeException("Cannot get the sibling of the root.");
+		return new AndroidFileHandle(assets, new File(file().getParent(), name), type);
 	}
 
 	public FileHandle parent () {
-		File parent = file.getParentFile();
+		File parent = file().getParentFile();
 		if (parent == null) {
 			if (type == FileType.Absolute)
 				parent = new File("/");
@@ -77,19 +80,20 @@ public class AndroidFileHandle extends FileHandle {
 				throw new GdxRuntimeException("Error reading file: " + file + " (" + type + ")", ex);
 			}
 		}
+		
 		return super.read();
 	}
 
 	public FileHandle[] list () {
 		if (type == FileType.Internal) {
 			try {
-				String[] relativePaths = assets.list(file.getPath());
+				String[] relativePaths = assets.list(file().getPath());
 				FileHandle[] handles = new FileHandle[relativePaths.length];
 				for (int i = 0, n = handles.length; i < n; i++)
-					handles[i] = new AndroidFileHandle(assets, new File(file, relativePaths[i]), type);
+					handles[i] = new AndroidFileHandle(assets, new File(file(), relativePaths[i]), type);
 				return handles;
 			} catch (Exception ex) {
-				throw new GdxRuntimeException("Error listing children: " + file + " (" + type + ")", ex);
+				throw new GdxRuntimeException("Error listing children: " + file() + " (" + type + ")", ex);
 			}
 		}
 		return super.list();
@@ -124,13 +128,13 @@ public class AndroidFileHandle extends FileHandle {
 	public FileHandle[] list (FilenameFilter filter) {
 		if (type == FileType.Internal) {
 			try {
-				String[] relativePaths = assets.list(file.getPath());
+				String[] relativePaths = assets.list(file().getPath());
 				FileHandle[] handles = new FileHandle[relativePaths.length];
 				int count = 0;
 				for (int i = 0, n = handles.length; i < n; i++) {
 					String path = relativePaths[i];
-					if (!filter.accept(file, path)) continue;
-					handles[count] = new AndroidFileHandle(assets, new File(file, path), type);
+					if (!filter.accept(file(), path)) continue;
+					handles[count] = new AndroidFileHandle(assets, new File(file(), path), type);
 					count++;
 				}
 				if (count < relativePaths.length) {
@@ -140,7 +144,7 @@ public class AndroidFileHandle extends FileHandle {
 				}
 				return handles;
 			} catch (Exception ex) {
-				throw new GdxRuntimeException("Error listing children: " + file + " (" + type + ")", ex);
+				throw new GdxRuntimeException("Error listing children: " + file() + " (" + type + ")", ex);
 			}
 		}
 		return super.list(filter);
@@ -149,13 +153,13 @@ public class AndroidFileHandle extends FileHandle {
 	public FileHandle[] list (String suffix) {
 		if (type == FileType.Internal) {
 			try {
-				String[] relativePaths = assets.list(file.getPath());
+				String[] relativePaths = assets.list(file().getPath());
 				FileHandle[] handles = new FileHandle[relativePaths.length];
 				int count = 0;
 				for (int i = 0, n = handles.length; i < n; i++) {
 					String path = relativePaths[i];
 					if (!path.endsWith(suffix)) continue;
-					handles[count] = new AndroidFileHandle(assets, new File(file, path), type);
+					handles[count] = new AndroidFileHandle(assets, new File(file(), path), type);
 					count++;
 				}
 				if (count < relativePaths.length) {
@@ -165,7 +169,7 @@ public class AndroidFileHandle extends FileHandle {
 				}
 				return handles;
 			} catch (Exception ex) {
-				throw new GdxRuntimeException("Error listing children: " + file + " (" + type + ")", ex);
+				throw new GdxRuntimeException("Error listing children: " + file() + " (" + type + ")", ex);
 			}
 		}
 		return super.list(suffix);
@@ -174,7 +178,7 @@ public class AndroidFileHandle extends FileHandle {
 	public boolean isDirectory () {
 		if (type == FileType.Internal) {
 			try {
-				return assets.list(file.getPath()).length > 0;
+				return assets.list(file().getPath()).length > 0;
 			} catch (IOException ex) {
 				return false;
 			}
@@ -184,7 +188,7 @@ public class AndroidFileHandle extends FileHandle {
 
 	public boolean exists () {
 		if (type == FileType.Internal) {
-			String fileName = file.getPath();
+			String fileName = file().getPath();
 			try {
 				assets.open(fileName).close(); // Check if file exists.
 				return true;
@@ -204,7 +208,7 @@ public class AndroidFileHandle extends FileHandle {
 		if (type == FileType.Internal) {
 			AssetFileDescriptor fileDescriptor = null;
 			try {
-				fileDescriptor = assets.openFd(file.getPath());
+				fileDescriptor = assets.openFd(file().getPath());
 				return fileDescriptor.getLength();
 			} catch (IOException ignored) {
 			} finally {
@@ -226,6 +230,20 @@ public class AndroidFileHandle extends FileHandle {
 
 	public File file () {
 		if (type == FileType.Local) return new File(Gdx.files.getLocalStoragePath(), file.getPath());
+		if (type == FileType.External) {
+			if (this.androidFiles.legacyWriting) {
+				// Legacy APIs work fine, use them.
+				return new File(Gdx.files.getExternalStoragePath(), file.getPath());
+			} else {
+				// Legacy APIs don't work, darn. 
+				File eFile = new File(Gdx.files.getExternalStoragePath(), file.getPath());
+				if (!eFile.exists()) {
+					// The file doesn't exist, so return the writable position.
+					eFile = new File(this.androidFiles.modernSdcard, file.getPath());
+					return eFile;
+				}
+			}
+		}
 		return super.file();
 	}
 

@@ -17,6 +17,7 @@
 package com.badlogic.gdx.backends.android;
 
 import java.io.File;
+import java.io.IOException;
 
 import android.content.Context;
 import android.content.res.AssetManager;
@@ -31,23 +32,48 @@ import com.badlogic.gdx.files.FileHandle;
  * @author Nathan Sweet */
 public class AndroidFiles implements Files {
 	protected String sdcard = "";
-	protected boolean isExternalStorageAvailable = false;
+	protected boolean legacyWriting = false;
+	protected String modernSdcard = "";
+	
 	protected final String localpath;
 
 	protected final AssetManager assets;
-  
+	
 	public AndroidFiles (AssetManager assets, Context context) {
 		this.assets = assets;
-		if (Build.VERSION.SDK_INT > Build.VERSION_CODES.KITKAT) {
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
 			// Starting in Android API Level 19 'KitKat', external storage changes have been introduced.
-			File sdcardFolder = context.getExternalFilesDir(null);
+			// But not all devices use this change, so we have to improvise. 
+			File testFile = new File(Environment.getExternalStorageDirectory(), ".gdxexternaltest");
 			
-			if (sdcardFolder != null) {
-				this.sdcard = sdcardFolder.getAbsolutePath();
-				if (!sdcardFolder.exists()) {
-					sdcardFolder.mkdirs();
-				}
+			if (testFile.exists()) {
+				testFile.delete();
 			}
+			
+			try {
+				this.legacyWriting = testFile.createNewFile();
+			} catch (IOException e) {
+				this.legacyWriting = false;
+			}
+			
+			try {
+				testFile.delete();
+			} catch (Exception e) {
+				// Ignored.
+			}
+			
+			this.sdcard = Environment.getExternalStorageDirectory().getAbsolutePath() + "/";
+			
+			if (!legacyWriting) {
+				// Legacy behavior is not functional, use new behavior.
+				File sdcardFolder = context.getExternalFilesDir(null);
+				if (sdcardFolder != null) {
+					this.sdcard = sdcardFolder.getAbsolutePath();
+					if (!sdcardFolder.exists()) {
+						sdcardFolder.mkdirs();
+					}
+				}
+			} 		
 		} else {
 			// Legacy behavior for Android API Level 18 'Jellybean' and below. Allows unrestricted access to the sdcard
 			this.sdcard = Environment.getExternalStorageDirectory().getAbsolutePath() + "/";
@@ -58,16 +84,41 @@ public class AndroidFiles implements Files {
 	public AndroidFiles (AssetManager assets, String localpath, Context context) {
 		this.assets = assets;
 		this.localpath = localpath.endsWith("/") ? localpath : localpath + "/";
+		
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
 			// Starting in Android API Level 19 'KitKat', external storage changes have been introduced.
-			File sdcardFolder = context.getExternalFilesDir(null);
+			// But not all devices use this change, so we have to improvise
 			
-			if (sdcardFolder != null) {
-				this.sdcard = sdcardFolder.getAbsolutePath();
-				if (!sdcardFolder.exists()) {
-					sdcardFolder.mkdirs();
-				}
+			File testFile = new File(Environment.getExternalStorageDirectory(), ".gdxexternaltest");
+			
+			if (testFile.exists()) {
+				testFile.delete();
 			}
+			
+			try {
+				this.legacyWriting = testFile.createNewFile();
+			} catch (IOException e) {
+				this.legacyWriting = false;
+			}
+			
+			try {
+				testFile.delete();
+			} catch (Exception e) {
+				// Ignored.
+			}
+			
+			this.sdcard = Environment.getExternalStorageDirectory().getAbsolutePath() + "/";
+			
+			if (!legacyWriting) {
+				// Legacy behavior is not functional, use new behavior.
+				File sdcardFolder = context.getExternalFilesDir(null);
+				if (sdcardFolder != null) {
+					this.sdcard = sdcardFolder.getAbsolutePath();
+					if (!sdcardFolder.exists()) {
+						sdcardFolder.mkdirs();
+					}
+				}
+			} 		
 		} else {
 			// Legacy behavior for Android API Level 18 'Jellybean' and below. Allows unrestricted access to the sdcard
 			this.sdcard = Environment.getExternalStorageDirectory().getAbsolutePath() + "/";
